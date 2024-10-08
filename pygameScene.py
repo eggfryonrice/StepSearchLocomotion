@@ -27,10 +27,10 @@ class pygameScene:
     def __init__(
         self,
         frameTime: float = 0.033,
-        cameraAngleX: float = math.pi / 4,
+        cameraAngleX: float = math.pi / 8,
         cameraAngleY: float = -math.pi / 2,
-        width: int = 1600,
-        height: int = 900,
+        width: int = 2560,
+        height: int = 1600,
         sphereRadius: float = 3,
         cuboidWidth: float = 4,
     ):
@@ -52,13 +52,15 @@ class pygameScene:
         self.sphereRadius: float = sphereRadius
         self.cuboidWidth: float = cuboidWidth
 
+        self.chessBoardCenter: np.ndarray = np.array([0, 0, 0])
+
         # Camera parameters
         self.cameraCenter: np.ndarray = np.array([0, 0, 0])
         # cameracenter will be initialized by first data
         self.cameraCenterInitializedByFirstData = False
         self.cameraAngleX = cameraAngleX
         self.cameraAngleY = cameraAngleY
-        self.cameraDistance = 1000
+        self.cameraDistance = 500
 
         self.mouseDragging: bool = False
         self.prevMousePosition: tuple[int, int] = (0, 0)
@@ -99,9 +101,10 @@ class pygameScene:
             for jointPosition in jointsPosition:
                 if self.cameraCenter[1] > jointPosition[1]:
                     self.cameraCenter[1] = jointPosition[1]
+        self.chessBoardCenter = self.cameraCenter.copy()
         self.cameraCenterInitializedByFirstData = True
 
-    def handleInput(self):
+    def handleMouseInput(self):
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 self.running = False
@@ -123,8 +126,7 @@ class pygameScene:
                     xrot = (mouseY - self.prevMousePosition[1]) * math.pi / self.height
                     yrot = (mouseX - self.prevMousePosition[0]) * math.pi / self.width
                     self.cameraAngleX = max(
-                        -math.pi / 2 + 1e-8,
-                        min(math.pi / 2 - 1e-8, self.cameraAngleX + xrot),
+                        0, min(math.pi / 2 - 1e-8, self.cameraAngleX + xrot)
                     )
                     self.cameraAngleY = self.cameraAngleY + yrot
 
@@ -135,6 +137,41 @@ class pygameScene:
                 if self.cameraDistance < 20:
                     self.cameraDistance = 20
 
+    def handleKeyBoardInput(self):
+        keys = pygame.key.get_pressed()
+
+        speed = 10
+        direction = np.array([0.0, 0.0])
+        if keys[pygame.K_UP]:
+            direction[0] -= math.cos(self.cameraAngleY)
+            direction[1] -= math.sin(self.cameraAngleY)
+        if keys[pygame.K_DOWN]:
+            direction[0] += math.cos(self.cameraAngleY)
+            direction[1] += math.sin(self.cameraAngleY)
+        if keys[pygame.K_LEFT]:
+            direction[0] -= math.sin(self.cameraAngleY)
+            direction[1] += math.cos(self.cameraAngleY)
+        if keys[pygame.K_RIGHT]:
+            direction[0] += math.sin(self.cameraAngleY)
+            direction[1] -= math.cos(self.cameraAngleY)
+        if np.linalg.norm(direction) > 1e-8:
+            velocity = speed * direction / np.linalg.norm(direction)
+            self.cameraCenter[0] += velocity[0]
+            self.cameraCenter[2] += velocity[1]
+
+        # Handle arrow keys for camera panning (left/right/up/down)
+        if keys[pygame.K_a]:  # Rotate camera left
+            self.cameraAngleY -= 0.05
+        if keys[pygame.K_d]:  # Rotate camera right
+            self.cameraAngleY += 0.05
+        if keys[pygame.K_w]:  # Rotate camera left
+            self.cameraAngleX = min(math.pi / 2 - 1e-8, self.cameraAngleX + 0.05)
+        if keys[pygame.K_s]:  # Rotate camera right
+            self.cameraAngleX = max(0, self.cameraAngleX - 0.05)
+
+        glLoadIdentity()
+
+    def adjustCamera(self):
         glLoadIdentity()
 
         # rotate camera along x axis first, and then along y axis
@@ -231,9 +268,11 @@ class pygameScene:
         ]
         return normals
 
-    def drawChessBoard(self, numGrid: int = 14, blockSize: float = 50):
+    def drawChessBoard(
+        self, numGrid: int = 14, blockSize: float = 50, drawCameraCenter: bool = False
+    ):
         # floor is located at cameracenterheight - joint radius
-        height = self.cameraCenter[1] - self.sphereRadius
+        height = self.chessBoardCenter[1] - self.sphereRadius
 
         glPushMatrix()
 
@@ -241,8 +280,8 @@ class pygameScene:
 
         for i in range(numGrid):
             for j in range(numGrid):
-                x = -halfSize + i * blockSize + self.cameraCenter[0]
-                z = -halfSize + j * blockSize + self.cameraCenter[2]
+                x = -halfSize + i * blockSize + self.chessBoardCenter[0]
+                z = -halfSize + j * blockSize + self.chessBoardCenter[2]
 
                 if (i + j) % 2 == 0:
                     glColor3f(0.9, 0.9, 0.9)
@@ -255,6 +294,22 @@ class pygameScene:
                 glVertex3f(x + blockSize, height, z + blockSize)
                 glVertex3f(x, height, z + blockSize)
                 glEnd()
+
+        if drawCameraCenter:
+            x = self.cameraCenter[0]
+            z = self.cameraCenter[2]
+            radius = 10
+            segments = 30
+            glColor3f(1.0, 0.0, 0.0)
+            glBegin(GL_TRIANGLE_FAN)
+            glVertex3f(x, height + 1, z)
+            for i in range(segments + 1):
+                angle = 2 * math.pi * i / segments
+                dx = radius * math.cos(angle)
+                dz = radius * math.sin(angle)
+                glVertex3f(x + dx, height + 1, z + dz)
+
+            glEnd()
 
         glPopMatrix()
 
@@ -293,14 +348,16 @@ class pygameScene:
         if not self.cameraCenterInitializedByFirstData:
             self.initCameraCenter(jointsPositions)
 
-        self.handleInput()
+        self.handleKeyBoardInput()
+        self.handleMouseInput()
+        self.adjustCamera()
 
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)  # type: ignore
 
         if not self.running:
             return
 
-        self.drawChessBoard()
+        self.drawChessBoard(drawCameraCenter=True)
 
         for jointsPosition, color in jointsPositions:
             for jointPosition in jointsPosition:
