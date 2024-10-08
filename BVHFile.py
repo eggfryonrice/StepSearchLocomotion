@@ -1,8 +1,7 @@
 import numpy as np
-from typing import Callable
 import math
 
-from pygameScene import pygameScene, sceneInput
+from pygameScene import pygameScene
 from transformationUtil import *
 
 
@@ -253,7 +252,7 @@ class BVHFile:
             translationData, eulerData, transformation
         )
 
-    def getJointVelocity(self, idx: int, frame: int) -> float:
+    def getJointSpeed(self, idx: int, frame: int) -> float:
         currJointPosition = self.calculateJointPositionFromEulerData(
             idx, self.translationDatas[frame], self.eulerDatas[frame]
         )
@@ -274,7 +273,7 @@ class BVHFile:
 
 
 if __name__ == "__main__":
-    filePath = "example.bvh"
+    filePath = "aiming.bvh"
     file = BVHFile(filePath)
     scene = pygameScene(frameTime=file.frameTime)
 

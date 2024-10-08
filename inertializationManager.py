@@ -224,13 +224,13 @@ class exampleDataFtn1:
             self.translation = self.translation + self.startEndTranslation
 
         c1 = (
-            self.file.getJointVelocity(
+            self.file.getJointSpeed(
                 self.file.jointNames.index("LeftToe"), self.file.currentFrame
             )
             < 30
         )
         c2 = (
-            self.file.getJointVelocity(
+            self.file.getJointSpeed(
                 self.file.jointNames.index("RightToe"), self.file.currentFrame
             )
             < 30
@@ -256,13 +256,13 @@ class exampleDataFtn2:
             self.file.currentFrame = 0
 
         c1 = (
-            self.file.getJointVelocity(
+            self.file.getJointSpeed(
                 self.file.jointNames.index("LeftToe"), self.file.currentFrame
             )
             < 30
         )
         c2 = (
-            self.file.getJointVelocity(
+            self.file.getJointSpeed(
                 self.file.jointNames.index("RightToe"), self.file.currentFrame
             )
             < 30
@@ -312,14 +312,14 @@ class exampleDataFtn3:
             quatData = eulersToQuats(eulerData)
 
             c1 = (
-                self.file1.getJointVelocity(
+                self.file1.getJointSpeed(
                     self.file1.jointNames.index("LeftToe"),
                     self.file1Frame - self.prepTime + frame,
                 )
                 < 30
             )
             c2 = (
-                self.file1.getJointVelocity(
+                self.file1.getJointSpeed(
                     self.file1.jointNames.index("RightToe"),
                     self.file1Frame - self.prepTime + frame,
                 )
@@ -363,14 +363,14 @@ class exampleDataFtn3:
             )
 
             c1 = (
-                self.file2.getJointVelocity(
+                self.file2.getJointSpeed(
                     self.file2.jointNames.index("LeftToe"),
                     self.file2Frame - self.prepTime + self.currentFrame,
                 )
                 < 30
             )
             c2 = (
-                self.file2.getJointVelocity(
+                self.file2.getJointSpeed(
                     self.file2.jointNames.index("RightToe"),
                     self.file2Frame - self.prepTime + self.currentFrame,
                 )
@@ -386,7 +386,7 @@ class exampleDataFtn3:
 if __name__ == "__main__":
     dataFtn = exampleDataFtn1("example.bvh")
     dataFtn = exampleDataFtn2("example.bvh")
-    dataFtn = exampleDataFtn3("walking.bvh", 241, "dancing.bvh", 99)
+    dataFtn = exampleDataFtn3("walking1.bvh", 241, "dancing.bvh", 99)
 
     filePath = "example.bvh"
     file = BVHFile(filePath)

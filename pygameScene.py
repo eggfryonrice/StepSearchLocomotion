@@ -65,6 +65,8 @@ class pygameScene:
         self.mouseDragging: bool = False
         self.prevMousePosition: tuple[int, int] = (0, 0)
 
+        self.centerMovingDirection = np.array([0, 1])
+
     def initOpengl(self):
         glEnable(GL_DEPTH_TEST)
         glMatrixMode(GL_PROJECTION)
@@ -154,8 +156,10 @@ class pygameScene:
         if keys[pygame.K_RIGHT]:
             direction[0] += math.sin(self.cameraAngleY)
             direction[1] -= math.cos(self.cameraAngleY)
+        direction = direction / np.linalg.norm(direction)
         if np.linalg.norm(direction) > 1e-8:
-            velocity = speed * direction / np.linalg.norm(direction)
+            self.centerMovingDirection = direction
+            velocity = speed * direction
             self.cameraCenter[0] += velocity[0]
             self.cameraCenter[2] += velocity[1]
 

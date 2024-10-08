@@ -1,5 +1,4 @@
 import numpy as np
-from typing import Callable
 
 from BVHFile import BVHFile
 from pygameScene import pygameScene, sceneInput
@@ -266,6 +265,7 @@ class contactManager:
 
             # we should adjust rotation of p0 in the future when offset lengfth is not zero
             # maybe next time....
+
         return adjustedTranslationData, adjustedQuaternionData
 
 
