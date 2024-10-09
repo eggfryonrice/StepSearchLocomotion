@@ -5,8 +5,11 @@ venv/
 tempCodeRunnerFile.py
 experiment.py
 *.bvh
-!walking.bvh 
 note
+!idleData/**
+!walkingData/**
+!runningData/**
+
 
 # below is basic python .gitignore file
 # ----------------------------------------------------------------

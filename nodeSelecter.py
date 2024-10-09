@@ -1,5 +1,6 @@
 import numpy as np
 import os
+import random
 
 from BVHFile import BVHFile
 from transformationUtil import *
@@ -50,13 +51,18 @@ def getDirection(file: BVHFile, jointsPosition: np.ndarray):
 
 
 class nodeSelecter:
-    def __init__(self, folderPath, idleFilePath, contactVelocityThreshold=30):
+    def __init__(self, folderPath, idleFolderPath, contactVelocityThreshold=30):
         self.files: list[BVHFile] = []
         for fileName in os.listdir(folderPath):
             if fileName.endswith(".bvh"):
                 filePath = os.path.join(folderPath, fileName)
                 self.files.append(BVHFile(filePath))
-        self.idleFile = BVHFile(idleFilePath)
+        self.idleFiles: list[BVHFile] = []
+        for fileName in os.listdir(idleFolderPath):
+            if fileName.endswith(".bvh"):
+                filePath = os.path.join(idleFolderPath, fileName)
+                self.idleFiles.append(BVHFile(filePath))
+        self.file = self.files[0]
 
         # file, start, end, startDirection, endDirection
         self.leftTransitions: list[tuple[BVHFile, int, int, np.ndarray, np.ndarray]] = (
@@ -98,27 +104,70 @@ class nodeSelecter:
                     )
                     right += 1
 
-        self.leftContactIdx = self.idleFile.jointNames.index("LeftToe")
-        self.rightContactIdx = self.idleFile.jointNames.index("RightToe")
+        self.leftContactIdx = self.file.jointNames.index("LeftToe")
+        self.rightContactIdx = self.file.jointNames.index("RightToe")
 
         self.isLeftContact = True
 
-    def getIdleNode(
+    def getStartIdleNode(
         self,
         controlPosition,
         controlDirection,
     ):
-        startJointsPosition = self.idleFile.calculateJointsPositionFromFrame(0)
-        startDirection = getDirection(self.idleFile, startJointsPosition)
+        idleIdx = random.randrange(len(self.idleFiles))
+        file = self.idleFiles[idleIdx]
+        startJointsPosition = file.calculateJointsPositionFromFrame(0)
+        startDirection = getDirection(file, startJointsPosition)
         rotation = quatToMat(vecToVecQuat(startDirection, controlDirection))
-        position = toCartesian(
-            self.idleFile.calculateJointPositionFromFrame(0, 0, rotation)
-        )
+        position = toCartesian(file.calculateJointPositionFromFrame(0, 0, rotation))
         position[1] = 0
         translation = translationMat(controlPosition - position)
-        return Node(
-            self.idleFile, 0, self.idleFile.numFrames - 1, translation @ rotation
+        return Node(file, 0, file.numFrames - 1, translation @ rotation)
+
+    def getIdleNode(
+        self,
+        jointsPosition,
+    ):
+        idleIdx = random.randrange(len(self.idleFiles))
+        file = self.idleFiles[idleIdx]
+        direction = getDirection(file, jointsPosition)
+
+        startJointsPosition = file.calculateJointsPositionFromFrame(0)
+        startDirection = getDirection(file, startJointsPosition)
+        rotation = quatToMat(vecToVecQuat(startDirection, direction))
+
+        # which foot is at front?
+        rootPosition = toCartesian(jointsPosition[0])
+        rootPosition[1] = 0
+        leftContactPosition = toCartesian(jointsPosition[self.leftContactIdx])
+        leftContactPosition[1] = 0
+        rightContactPosition = toCartesian(jointsPosition[self.rightContactIdx])
+        rightContactPosition[1] = 0
+        leftDistance = np.linalg.norm(
+            normalize(leftContactPosition - rootPosition) - direction
         )
+        rightDistance = np.linalg.norm(
+            normalize(rightContactPosition - rootPosition) - direction
+        )
+
+        frontContactIdx = (
+            self.leftContactIdx
+            if leftDistance < rightDistance
+            else self.rightContactIdx
+        )
+        frontContactPosition = (
+            leftContactPosition
+            if leftDistance < rightDistance
+            else rightContactPosition
+        )
+
+        # match front contact joint
+        position = toCartesian(
+            file.calculateJointPositionFromFrame(frontContactIdx, 0, rotation)
+        )
+        position[1] = 0
+        translation = translationMat(frontContactPosition - position)
+        return Node(file, 0, file.numFrames - 1, translation @ rotation)
 
     def getNextNode(
         self,
@@ -129,9 +178,6 @@ class nodeSelecter:
     ):
         currentPosition = toCartesian(currentJointsPosition[0])
         currentPosition[1] = 0
-
-        # if np.linalg.norm(currentPosition - controlPosition) < 25:
-        #     return self.getIdleNode(controlPosition, controlDirection)
 
         transitions = (
             self.leftTransitions if self.isLeftContact else self.rightTransitions
@@ -150,8 +196,6 @@ class nodeSelecter:
             if error < bestError:
                 bestError = error
                 bestIdx = idx
-
-        # bestIdx = 3 if self.isLeftContact else 23
 
         file, start, end, startDirection, _ = transitions[bestIdx]
         rotation = quatToMat(vecToVecQuat(startDirection, currentDirection))

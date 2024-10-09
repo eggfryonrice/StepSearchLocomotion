@@ -20,7 +20,9 @@ class nodeDataReader:
             folderPath, idleFilePath, contactVelocityThreshold
         )
         self.file = self.nodeSelecter.files[0]
-        self.node: Node = self.nodeSelecter.getIdleNode(startPosition, startDirection)
+        self.node: Node = self.nodeSelecter.getStartIdleNode(
+            startPosition, startDirection
+        )
         self.currFrame: int = self.node.startFrame
 
         self.contactVelocityThreshold = contactVelocityThreshold
@@ -32,6 +34,9 @@ class nodeDataReader:
         self.objectiveIsMoving = False
 
         self.idle = True
+        self.idleJointsPosition = self.node.file.calculateJointsPositionFromFrame(
+            self.node.startFrame, self.node.transformation
+        )
 
     def setObjective(
         self,
@@ -48,14 +53,16 @@ class nodeDataReader:
         self.totalFrame += 1 - discontinuity
 
         if self.currFrame > self.node.endFrame:
-            self.node = self.nodeSelecter.getNextNode(
-                self.currentJointsPosition,
-                self.currentDirection,
-                self.objectivePosition,
-                self.objectiveDirection,
-            )
+            if self.idle:
+                self.node = self.nodeSelecter.getIdleNode(self.idleJointsPosition)
+            else:
+                self.node = self.nodeSelecter.getNextNode(
+                    self.currentJointsPosition,
+                    self.currentDirection,
+                    self.objectivePosition,
+                    self.objectiveDirection,
+                )
             self.currFrame = self.node.startFrame
-            self.idle = False
 
         contactIdx1 = self.file.jointNames.index("LeftToe")
         c1 = (
@@ -99,8 +106,20 @@ class nodeDataReader:
         self.currentDirection = getDirection(self.file, jointsPosition)
         self.currentJointsPosition = jointsPosition
 
-        self.currFrame += 1
+        rootPosition = toCartesian(self.currentJointsPosition[0])
+        rootPosition[1] = 0
+        distance = np.linalg.norm(rootPosition - self.objectivePosition)
+        if (not self.objectiveIsMoving) and (not self.idle) and (distance < 30):
+            self.idle = True
+            self.idleJointsPosition = self.currentJointsPosition
+            discontinuity = True
+            self.currFrame = self.node.endFrame
+        if self.idle and self.objectiveIsMoving:
+            self.idle = False
+            discontinuity = True
+            self.currFrame = self.node.endFrame
 
+        self.currFrame += 1
         return (
             self.totalFrame,
             translationData,

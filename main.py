@@ -4,19 +4,19 @@ from nodeDataReader import nodeDataReader
 from inertializationManager import inertializationManager
 
 
-folderPath = "./data"
-idleFilePath = "./idle.bvh"
-file = BVHFile(idleFilePath)
-
+folderPath = "./runningData"
+idleFilePath = "./idleData"
 dataFtn = nodeDataReader(folderPath, idleFilePath)
-scene = pygameScene(frameTime=file.frameTime)
+file = dataFtn.file
+
+scene = pygameScene(frameTime=file.frameTime, speed=200)
 manager = inertializationManager(
     file,
     dataFtn.getNextData,
     halfLife=0.15,
     handleContact=True,
     unlockRadius=30,
-    compare=True,
+    compare=False,
 )
 while scene.running:
     position = scene.cameraCenter.copy()

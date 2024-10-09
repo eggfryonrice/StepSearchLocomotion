@@ -29,7 +29,7 @@ class pygameScene:
         frameTime: float = 0.033,
         cameraAngleX: float = math.pi / 8,
         cameraAngleY: float = -math.pi / 2,
-        speed=150,
+        speed: float = 150,
         width: int = 2560,
         height: int = 1600,
         sphereRadius: float = 3,
@@ -56,7 +56,7 @@ class pygameScene:
         self.chessBoardCenter: np.ndarray = np.array([0, 0, 0])
 
         # Camera parameters
-        self.cameraCenter: np.ndarray = np.array([0, 0, 0])
+        self.cameraCenter: np.ndarray = np.array([0.0, 0.0, 0.0])
         # cameracenter will be initialized by first data
         self.cameraCenterInitializedByFirstData = False
         self.cameraAngleX = cameraAngleX
@@ -386,4 +386,4 @@ class pygameScene:
 if __name__ == "__main__":
     scene = pygameScene()
     while scene.running:
-        scene.updateScene((0, [(np.array([[0, 0, 0], [0, 0, 50]]), (1, 0.5, 0.5))], []))
+        scene.updateScene((0, [(np.array([[0.0, 0.0, 0.0]]), (1, 0.5, 0.5))], []))
