@@ -10,8 +10,8 @@ class nodeDataReader:
         self,
         folderPath: str,
         idleFilePath: str,
-        startPosition: np.ndarray = np.array([0, 0]),
-        startDirection: np.ndarray = np.array([0, 1]),
+        startPosition: np.ndarray = np.array([0, 0, 0]),
+        startDirection: np.ndarray = np.array([0, 0, 1]),
         contactVelocityThreshold: int = 30,
     ):
         self.totalFrame: int = -1
@@ -20,9 +20,7 @@ class nodeDataReader:
             folderPath, idleFilePath, contactVelocityThreshold
         )
         self.file = self.nodeSelecter.files[0]
-        self.node: Node = self.nodeSelecter.getFirstIdleNode(
-            startPosition, startDirection
-        )
+        self.node: Node = self.nodeSelecter.getIdleNode(startPosition, startDirection)
         self.currFrame: int = self.node.startFrame
 
         self.contactVelocityThreshold = contactVelocityThreshold
@@ -31,16 +29,24 @@ class nodeDataReader:
         self.currentDirection = startDirection
         self.objectivePosition = startPosition
         self.objectiveDirection = startDirection
+        self.objectiveIsMoving = False
+
+        self.idle = True
 
     def setObjective(
-        self, objectivePosition: np.ndarray, objectiveDirection: np.ndarray
+        self,
+        objectivePosition: np.ndarray,
+        objectiveDirection: np.ndarray,
+        isMoving: bool,
     ):
         self.objectivePosition = objectivePosition
         self.objectiveDirection = objectiveDirection
+        self.objectiveIsMoving = isMoving
 
     def getNextData(self):
         discontinuity: bool = self.currFrame == self.node.endFrame
         self.totalFrame += 1 - discontinuity
+
         if self.currFrame > self.node.endFrame:
             self.node = self.nodeSelecter.getNextNode(
                 self.currentJointsPosition,
@@ -49,6 +55,7 @@ class nodeDataReader:
                 self.objectiveDirection,
             )
             self.currFrame = self.node.startFrame
+            self.idle = False
 
         contactIdx1 = self.file.jointNames.index("LeftToe")
         c1 = (
@@ -86,12 +93,11 @@ class nodeDataReader:
         )
         quatData[0] = multQuat(quatY(yRotation), quatData[0])
 
-        if discontinuity:
-            jointsPosition = self.file.calculateJointsPositionFromQuaternionData(
-                translationData, quatData
-            )
-            self.currentDirection = getDirection(self.file, jointsPosition)
-            self.currentJointsPosition = jointsPosition
+        jointsPosition = self.file.calculateJointsPositionFromQuaternionData(
+            translationData, quatData
+        )
+        self.currentDirection = getDirection(self.file, jointsPosition)
+        self.currentJointsPosition = jointsPosition
 
         self.currFrame += 1
 

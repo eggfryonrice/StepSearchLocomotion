@@ -273,7 +273,7 @@ class BVHFile:
 
 
 if __name__ == "__main__":
-    filePath = "aiming.bvh"
+    filePath = "idle.bvh"
     file = BVHFile(filePath)
     scene = pygameScene(frameTime=file.frameTime)
 

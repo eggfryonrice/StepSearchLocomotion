@@ -29,6 +29,7 @@ class pygameScene:
         frameTime: float = 0.033,
         cameraAngleX: float = math.pi / 8,
         cameraAngleY: float = -math.pi / 2,
+        speed=150,
         width: int = 2560,
         height: int = 1600,
         sphereRadius: float = 3,
@@ -61,11 +62,13 @@ class pygameScene:
         self.cameraAngleX = cameraAngleX
         self.cameraAngleY = cameraAngleY
         self.cameraDistance = 500
+        self.speed = speed
 
         self.mouseDragging: bool = False
         self.prevMousePosition: tuple[int, int] = (0, 0)
 
-        self.centerMovingDirection = np.array([0, 1])
+        self.centerMovingDirection = np.array([0, 0, 1])
+        self.centerIsMoving = False
 
     def initOpengl(self):
         glEnable(GL_DEPTH_TEST)
@@ -143,25 +146,27 @@ class pygameScene:
         keys = pygame.key.get_pressed()
 
         speed = 10
-        direction = np.array([0.0, 0.0])
+        direction = np.array([0.0, 0.0, 0.0])
         if keys[pygame.K_UP]:
             direction[0] -= math.cos(self.cameraAngleY)
-            direction[1] -= math.sin(self.cameraAngleY)
+            direction[2] -= math.sin(self.cameraAngleY)
         if keys[pygame.K_DOWN]:
             direction[0] += math.cos(self.cameraAngleY)
-            direction[1] += math.sin(self.cameraAngleY)
+            direction[2] += math.sin(self.cameraAngleY)
         if keys[pygame.K_LEFT]:
             direction[0] -= math.sin(self.cameraAngleY)
-            direction[1] += math.cos(self.cameraAngleY)
+            direction[2] += math.cos(self.cameraAngleY)
         if keys[pygame.K_RIGHT]:
             direction[0] += math.sin(self.cameraAngleY)
-            direction[1] -= math.cos(self.cameraAngleY)
-        direction = direction / np.linalg.norm(direction)
+            direction[2] -= math.cos(self.cameraAngleY)
         if np.linalg.norm(direction) > 1e-8:
+            direction = direction / np.linalg.norm(direction)
             self.centerMovingDirection = direction
-            velocity = speed * direction
-            self.cameraCenter[0] += velocity[0]
-            self.cameraCenter[2] += velocity[1]
+            self.centerIsMoving = True
+            change = self.speed * self.frameTime * direction
+            self.cameraCenter += change
+        else:
+            self.centerIsMoving = False
 
         # Handle arrow keys for camera panning (left/right/up/down)
         if keys[pygame.K_a]:  # Rotate camera left
