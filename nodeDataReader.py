@@ -48,7 +48,9 @@ class nodeDataReader:
     ):
         self.objectiveDirection = objectiveDirection
         self.objectiveIsMoving = isMoving
-        self.nodeSelecter = self.nodeSelecters[mode]
+        nextNodeSelecter = self.nodeSelecters[mode]
+        nextNodeSelecter.isLeftContact = self.nodeSelecter.isLeftContact
+        self.nodeSelecter = nextNodeSelecter
 
     def getNextData(self):
         discontinuity: bool = self.currFrame == self.node.endFrame
