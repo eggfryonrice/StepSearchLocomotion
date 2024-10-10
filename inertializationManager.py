@@ -54,6 +54,12 @@ class inertializationManager:
             halfLife=contactHalfLife,
         )
 
+        self.currentRootPosition = toCartesian(
+            self.file.calculateJointPositionFromQuaternionData(
+                0, self.currentData[1], self.currentData[2]
+            )
+        )
+
     def dampOffsets(self):
         y = 2 * 0.6931 / self.halfLife
         eydt = np.exp(-y * self.file.frameTime)
@@ -193,6 +199,8 @@ class inertializationManager:
             )
             jointsPositions.append((originalJointsPosition, (1.0, 0.0, 0.0)))
             linkss.append((originalLinks, (1.0, 0.0, 0.0)))
+
+        self.currentRootPosition = adjustedJointsPosition[0]
 
         return (
             frame,
