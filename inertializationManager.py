@@ -171,13 +171,13 @@ class inertializationManager:
         frame, translationData, quatData = self.manageInertialization()
 
         if self.handleContact:
-            adjustedTranslation, adjustedQuat = self.contactManager.manageContact(
+            translationData, quatData = self.contactManager.manageContact(
                 (translationData, quatData, contact)
             )
 
         adjustedJointsPosition, adjustedLinks = (
             self.file.calculateJointsPositionAndLinksFromQuaternionData(
-                adjustedTranslation, adjustedQuat
+                translationData, quatData
             )
         )
         jointsPositions.append((adjustedJointsPosition, (1.0, 0.5, 0.5)))

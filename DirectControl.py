@@ -6,9 +6,11 @@ from nodeDataReader import nodeDataReader
 from inertializationManager import inertializationManager
 
 
-folderPath = "./runningData"
+folderPaths = ["./walkingData", "./runningData"]
 idleFilePath = "./idleData"
-dataFtn = nodeDataReader(folderPath, idleFilePath, interpolation=0)
+dataFtn = nodeDataReader(
+    folderPaths, idleFilePath, interpolation=5, contactVelocityThreshold=20
+)
 file = dataFtn.file
 
 scene = pygameScene(frameTime=file.frameTime, speed=0)
@@ -17,7 +19,7 @@ manager = inertializationManager(
     dataFtn.getNextData,
     halfLife=0.15,
     handleContact=True,
-    unlockRadius=30,
+    unlockRadius=20,
     compare=False,
 )
 
@@ -31,5 +33,6 @@ while scene.running:
     )
     direction = scene.centerMovingDirection
     isMoving = scene.centerIsMoving
-    dataFtn.setObjective(direction, isMoving)
+    mode = scene.mode % 2
+    dataFtn.setObjective(direction, isMoving, mode)
     scene.updateScene(manager.getNextSceneInput())

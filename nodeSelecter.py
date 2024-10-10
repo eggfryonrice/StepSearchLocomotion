@@ -192,6 +192,7 @@ class nodeSelecter:
         contactIdx = self.leftContactIdx if self.isLeftContact else self.rightContactIdx
 
         bestIdx = 0
+        goodEnoughIdxes = []
         bestError = float("inf")
         for idx in range(len(transitions)):
             file, start, end, startDirection, endDirection = transitions[idx]
@@ -201,6 +202,25 @@ class nodeSelecter:
             if error < bestError:
                 bestError = error
                 bestIdx = idx
+            if error < 2 * math.sin(self.interpolation * math.pi / 180 / 2):
+                goodEnoughIdxes.append(idx)
+
+        if len(goodEnoughIdxes) > 0:
+            bestIdx = goodEnoughIdxes[0]
+            bestDisplacement = -float("inf")
+            for idx in goodEnoughIdxes:
+                file, start, end, startDirection, endDirection = transitions[idx]
+                rotation = quatToMat(vecToVecQuat(startDirection, currentDirection))
+                startPosition = toCartesian(
+                    file.calculateJointPositionFromFrame(0, start, rotation)
+                )
+                endPosition = toCartesian(
+                    file.calculateJointPositionFromFrame(0, end, rotation)
+                )
+                displacement = np.dot(objectiveDirection, endPosition - startPosition)
+                if displacement > bestDisplacement:
+                    bestIdx = idx
+                    bestDisplacement = displacement
 
         file, start, end, startDirection, endDirection = transitions[bestIdx]
         rotation = quatToMat(vecToVecQuat(startDirection, currentDirection))

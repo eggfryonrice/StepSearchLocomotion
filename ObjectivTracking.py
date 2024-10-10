@@ -6,9 +6,9 @@ from nodeDataReader import nodeDataReader
 from inertializationManager import inertializationManager
 
 
-folderPath = "./walkingData"
+folderPaths = ["./walkingData"]
 idleFilePath = "./idleData"
-dataFtn = nodeDataReader(folderPath, idleFilePath, interpolation=5)
+dataFtn = nodeDataReader(folderPaths, idleFilePath, interpolation=5)
 file = dataFtn.file
 
 scene = pygameScene(frameTime=file.frameTime, speed=200)

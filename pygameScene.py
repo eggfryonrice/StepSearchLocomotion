@@ -70,6 +70,8 @@ class pygameScene:
         self.centerMovingDirection = np.array([0, 0, 1])
         self.centerIsMoving = False
 
+        self.mode = 0
+
     def initOpengl(self):
         glEnable(GL_DEPTH_TEST)
         glMatrixMode(GL_PROJECTION)
@@ -176,6 +178,15 @@ class pygameScene:
             self.cameraAngleX = min(math.pi / 2 - 1e-8, self.cameraAngleX + 0.05)
         if keys[pygame.K_s]:  # Rotate camera right
             self.cameraAngleX = max(0, self.cameraAngleX - 0.05)
+
+        if keys[pygame.K_0]:
+            self.mode = 0
+        if keys[pygame.K_1]:
+            self.mode = 1
+        if keys[pygame.K_2]:
+            self.mode = 2
+        if keys[pygame.K_3]:
+            self.mode = 3
 
         glLoadIdentity()
 

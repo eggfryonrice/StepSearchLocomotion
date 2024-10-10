@@ -8,7 +8,7 @@ from nodeSelecter import nodeSelecter, Node, getDirection
 class nodeDataReader:
     def __init__(
         self,
-        folderPath: str,
+        folderPaths: list[str],
         idleFilePath: str,
         interpolation: int = 0,  # interpolation angle in degree
         startPosition: np.ndarray = np.array([0, 0, 0]),
@@ -17,9 +17,14 @@ class nodeDataReader:
     ):
         self.totalFrame: int = -1
 
-        self.nodeSelecter = nodeSelecter(
-            folderPath, idleFilePath, interpolation, contactVelocityThreshold
-        )
+        self.nodeSelecters: list[nodeSelecter] = []
+        for folderPath in folderPaths:
+            self.nodeSelecters.append(
+                nodeSelecter(
+                    folderPath, idleFilePath, interpolation, contactVelocityThreshold
+                )
+            )
+        self.nodeSelecter = self.nodeSelecters[0]
         self.file = self.nodeSelecter.files[0]
         self.node: Node = self.nodeSelecter.getStartIdleNode(
             startPosition, startDirection
@@ -39,12 +44,11 @@ class nodeDataReader:
         )
 
     def setObjective(
-        self,
-        objectiveDirection: np.ndarray,
-        isMoving: bool,
+        self, objectiveDirection: np.ndarray, isMoving: bool, mode: int = 0
     ):
         self.objectiveDirection = objectiveDirection
         self.objectiveIsMoving = isMoving
+        self.nodeSelecter = self.nodeSelecters[mode]
 
     def getNextData(self):
         discontinuity: bool = self.currFrame == self.node.endFrame
