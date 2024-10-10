@@ -10,7 +10,7 @@ class nodeDataReader:
         self,
         folderPath: str,
         idleFilePath: str,
-        interpolation: bool = False,
+        interpolation: int = 0,  # interpolation angle in degree
         startPosition: np.ndarray = np.array([0, 0, 0]),
         startDirection: np.ndarray = np.array([0, 0, 1]),
         contactVelocityThreshold: int = 30,

@@ -55,7 +55,7 @@ class nodeSelecter:
         self,
         folderPath,
         idleFolderPath,
-        interpolation=False,
+        interpolation: int = 0.0,
         contactVelocityThreshold=30,
     ):
         self.files: list[BVHFile] = []
@@ -202,9 +202,16 @@ class nodeSelecter:
                 bestError = error
                 bestIdx = idx
 
-        file, start, end, startDirection, _ = transitions[bestIdx]
-        nodeRotationQuat = vecToVecQuat(startDirection, currentDirection)
-        rotation = quatToMat(nodeRotationQuat)
+        file, start, end, startDirection, endDirection = transitions[bestIdx]
+        rotation = quatToMat(vecToVecQuat(startDirection, currentDirection))
+
+        endDirection = toCartesian(rotation @ toProjective(endDirection))
+        angleError = np.arccos(np.clip(np.dot(endDirection, objectiveDirection), -1, 1))
+        interpAngle = np.clip(
+            angleError,
+            -self.interpolation * math.pi / 180,
+            self.interpolation * math.pi / 180,
+        )
 
         startContactPosition = toCartesian(
             file.calculateJointPositionFromFrame(contactIdx, start, rotation)
@@ -215,7 +222,7 @@ class nodeSelecter:
         translation = translationMat(translationVector)
 
         self.isLeftContact = not self.isLeftContact
-        return Node(file, start, end, translation @ rotation)
+        return Node(file, start, end, translation @ rotation, interpAngle)
 
 
 if __name__ == "__main__":
