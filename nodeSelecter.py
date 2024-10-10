@@ -51,7 +51,13 @@ def getDirection(file: BVHFile, jointsPosition: np.ndarray):
 
 
 class nodeSelecter:
-    def __init__(self, folderPath, idleFolderPath, contactVelocityThreshold=30):
+    def __init__(
+        self,
+        folderPath,
+        idleFolderPath,
+        interpolation=False,
+        contactVelocityThreshold=30,
+    ):
         self.files: list[BVHFile] = []
         for fileName in os.listdir(folderPath):
             if fileName.endswith(".bvh"):
@@ -71,6 +77,8 @@ class nodeSelecter:
         self.rightTransitions: list[
             tuple[BVHFile, int, int, np.ndarray, np.ndarray]
         ] = []
+
+        self.interpolation = interpolation
 
         for file in self.files:
             leftStartOfContacts = findStartOfContacts(
@@ -173,8 +181,7 @@ class nodeSelecter:
         self,
         currentJointsPosition,
         currentDirection,
-        controlPosition,
-        controlDirection,
+        objectiveDirection,
     ):
         currentPosition = toCartesian(currentJointsPosition[0])
         currentPosition[1] = 0
@@ -183,8 +190,6 @@ class nodeSelecter:
             self.leftTransitions if self.isLeftContact else self.rightTransitions
         )
         contactIdx = self.leftContactIdx if self.isLeftContact else self.rightContactIdx
-
-        objectiveDirection = normalize((controlPosition - currentPosition))
 
         bestIdx = 0
         bestError = float("inf")
@@ -198,7 +203,8 @@ class nodeSelecter:
                 bestIdx = idx
 
         file, start, end, startDirection, _ = transitions[bestIdx]
-        rotation = quatToMat(vecToVecQuat(startDirection, currentDirection))
+        nodeRotationQuat = vecToVecQuat(startDirection, currentDirection)
+        rotation = quatToMat(nodeRotationQuat)
 
         startContactPosition = toCartesian(
             file.calculateJointPositionFromFrame(contactIdx, start, rotation)

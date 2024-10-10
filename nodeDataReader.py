@@ -10,6 +10,7 @@ class nodeDataReader:
         self,
         folderPath: str,
         idleFilePath: str,
+        interpolation: bool = False,
         startPosition: np.ndarray = np.array([0, 0, 0]),
         startDirection: np.ndarray = np.array([0, 0, 1]),
         contactVelocityThreshold: int = 30,
@@ -17,7 +18,7 @@ class nodeDataReader:
         self.totalFrame: int = -1
 
         self.nodeSelecter = nodeSelecter(
-            folderPath, idleFilePath, contactVelocityThreshold
+            folderPath, idleFilePath, interpolation, contactVelocityThreshold
         )
         self.file = self.nodeSelecter.files[0]
         self.node: Node = self.nodeSelecter.getStartIdleNode(
@@ -29,7 +30,6 @@ class nodeDataReader:
 
         self.currentJointsPosition = None
         self.currentDirection = startDirection
-        self.objectivePosition = startPosition
         self.objectiveDirection = startDirection
         self.objectiveIsMoving = False
 
@@ -40,11 +40,9 @@ class nodeDataReader:
 
     def setObjective(
         self,
-        objectivePosition: np.ndarray,
         objectiveDirection: np.ndarray,
         isMoving: bool,
     ):
-        self.objectivePosition = objectivePosition
         self.objectiveDirection = objectiveDirection
         self.objectiveIsMoving = isMoving
 
@@ -59,7 +57,6 @@ class nodeDataReader:
                 self.node = self.nodeSelecter.getNextNode(
                     self.currentJointsPosition,
                     self.currentDirection,
-                    self.objectivePosition,
                     self.objectiveDirection,
                 )
             self.currFrame = self.node.startFrame
@@ -108,8 +105,7 @@ class nodeDataReader:
 
         rootPosition = toCartesian(self.currentJointsPosition[0])
         rootPosition[1] = 0
-        distance = np.linalg.norm(rootPosition - self.objectivePosition)
-        if (not self.objectiveIsMoving) and (not self.idle) and (distance < 30):
+        if (not self.objectiveIsMoving) and (not self.idle):
             self.idle = True
             self.idleJointsPosition = self.currentJointsPosition
             discontinuity = True

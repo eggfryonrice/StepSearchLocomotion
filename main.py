@@ -1,10 +1,12 @@
-from BVHFile import BVHFile
+import numpy as np
+
+from transformationUtil import *
 from pygameScene import pygameScene
 from nodeDataReader import nodeDataReader
 from inertializationManager import inertializationManager
 
 
-folderPath = "./runningData"
+folderPath = "./walkingData"
 idleFilePath = "./idleData"
 dataFtn = nodeDataReader(folderPath, idleFilePath)
 file = dataFtn.file
@@ -18,10 +20,19 @@ manager = inertializationManager(
     unlockRadius=30,
     compare=False,
 )
+
+isMoving = False
+
 while scene.running:
-    position = scene.cameraCenter.copy()
+    cameraCenter = scene.cameraCenter.copy()
+    cameraCenter[1] = 0
+    position = toCartesian(dataFtn.currentJointsPosition[0])
     position[1] = 0
-    direction = scene.centerMovingDirection
-    isMoving = scene.centerIsMoving
-    dataFtn.setObjective(position, direction, isMoving)
+    direction = cameraCenter - position
+    distance = np.linalg.norm(cameraCenter - position)
+    if isMoving:
+        isMoving = scene.centerIsMoving or (distance > 40)
+    else:
+        isMoving = scene.centerIsMoving
+    dataFtn.setObjective(direction, isMoving)
     scene.updateScene(manager.getNextSceneInput())
