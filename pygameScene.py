@@ -72,6 +72,8 @@ class pygameScene:
 
         self.mode = 0
 
+        self.highLightPoint = np.array([0.0, 0.0, 0.0])
+
     def initOpengl(self):
         glEnable(GL_DEPTH_TEST)
         glMatrixMode(GL_PROJECTION)
@@ -287,8 +289,39 @@ class pygameScene:
         ]
         return normals
 
+    def drawArrow(
+        self, startPoint, direction, length=100, lineWidth=20, arrowHeadSize=50
+    ):
+        height = self.chessBoardCenter[1] - self.sphereRadius
+        endPoint = startPoint + direction * length
+
+        lineEndPoint = startPoint + direction * (length - arrowHeadSize)
+
+        glLineWidth(lineWidth)
+        glColor3f(1.0, 0.0, 0.0)
+        glBegin(GL_LINES)
+        glVertex3f(startPoint[0], height + 1, startPoint[2])
+        glVertex3f(lineEndPoint[0], height + 1, lineEndPoint[2])
+        glEnd()
+
+        perpendicular_dir = np.cross(direction, np.array([0, 1, 0]))
+        perpendicular_dir = perpendicular_dir / np.linalg.norm(perpendicular_dir)
+
+        arrow_head_point1 = (
+            endPoint - direction * arrowHeadSize + perpendicular_dir * arrowHeadSize / 2
+        )
+        arrow_head_point2 = (
+            endPoint - direction * arrowHeadSize - perpendicular_dir * arrowHeadSize / 2
+        )
+
+        glBegin(GL_TRIANGLES)
+        glVertex3f(endPoint[0], height + 1, endPoint[2])  # Arrowhead tip
+        glVertex3f(arrow_head_point1[0], height + 1, arrow_head_point1[2])
+        glVertex3f(arrow_head_point2[0], height + 1, arrow_head_point2[2])
+        glEnd()
+
     def drawChessBoard(
-        self, numGrid: int = 14, blockSize: float = 50, drawCameraCenter: bool = False
+        self, numGrid: int = 14, blockSize: float = 50, drawHighLight: bool = False
     ):
         # floor is located at cameracenterheight - joint radius
         height = self.chessBoardCenter[1] - self.sphereRadius
@@ -314,9 +347,9 @@ class pygameScene:
                 glVertex3f(x, height, z + blockSize)
                 glEnd()
 
-        if drawCameraCenter:
-            x = self.cameraCenter[0]
-            z = self.cameraCenter[2]
+        if drawHighLight:
+            x = self.highLightPoint[0]
+            z = self.highLightPoint[2]
             radius = 10
             segments = 30
             glColor3f(1.0, 0.0, 0.0)
@@ -327,8 +360,8 @@ class pygameScene:
                 dx = radius * math.cos(angle)
                 dz = radius * math.sin(angle)
                 glVertex3f(x + dx, height + 1, z + dz)
-
             glEnd()
+            self.drawArrow(self.highLightPoint, self.centerMovingDirection)
 
         glPopMatrix()
 
@@ -376,7 +409,7 @@ class pygameScene:
         if not self.running:
             return
 
-        self.drawChessBoard(drawCameraCenter=True)
+        self.drawChessBoard(drawHighLight=True)
 
         for jointsPosition, color in jointsPositions:
             for jointPosition in jointsPosition:

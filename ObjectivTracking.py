@@ -25,6 +25,7 @@ isMoving = False
 
 while scene.running:
     cameraCenter = scene.cameraCenter.copy()
+    scene.highLightPoint = cameraCenter
     cameraCenter[1] = 0
     position = toCartesian(dataFtn.currentJointsPosition[0])
     position[1] = 0

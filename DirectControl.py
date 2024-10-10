@@ -31,6 +31,7 @@ while scene.running:
         scene.cameraCenter[[0, 2]] * (1 - eps)
         + toCartesian(dataFtn.currentJointsPosition[0])[[0, 2]] * eps
     )
+    scene.highLightPoint = toCartesian(dataFtn.currentJointsPosition[0])
     direction = scene.centerMovingDirection
     isMoving = scene.centerIsMoving
     mode = scene.mode % 2
