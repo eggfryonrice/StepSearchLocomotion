@@ -153,13 +153,13 @@ class pygameScene:
         if keys[pygame.K_UP]:
             direction[0] -= math.cos(self.cameraAngleY)
             direction[2] -= math.sin(self.cameraAngleY)
-        if keys[pygame.K_DOWN]:
+        elif keys[pygame.K_DOWN]:
             direction[0] += math.cos(self.cameraAngleY)
             direction[2] += math.sin(self.cameraAngleY)
         if keys[pygame.K_LEFT]:
             direction[0] -= math.sin(self.cameraAngleY)
             direction[2] += math.cos(self.cameraAngleY)
-        if keys[pygame.K_RIGHT]:
+        elif keys[pygame.K_RIGHT]:
             direction[0] += math.sin(self.cameraAngleY)
             direction[2] -= math.cos(self.cameraAngleY)
         if np.linalg.norm(direction) > 1e-8:
