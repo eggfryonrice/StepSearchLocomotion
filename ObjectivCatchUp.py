@@ -2,13 +2,15 @@ import numpy as np
 
 from transformationUtil import *
 from pygameScene import pygameScene
-from nodeDataReader import nodeDataReader
+from dataGenerater import dataGenerater
 from inertializationManager import inertializationManager
 
 
 folderPaths = ["./walkingData"]
 idleFilePath = "./idleData"
-dataFtn = nodeDataReader(folderPaths, idleFilePath, interpolation=5)
+dataFtn = dataGenerater(
+    folderPaths, idleFilePath, rotationInterpolation=5, translationInterpolation=7
+)
 file = dataFtn.file
 
 scene = pygameScene(frameTime=file.frameTime, speed=200)
@@ -32,8 +34,8 @@ while scene.running:
     direction = cameraCenter - position
     distance = np.linalg.norm(cameraCenter - position)
     if isMoving:
-        isMoving = scene.centerIsMoving or (distance > 40)
+        isMoving = scene.controlIsMoving or (distance > 40)
     else:
-        isMoving = scene.centerIsMoving
+        isMoving = scene.controlIsMoving
     dataFtn.setObjective(direction, isMoving)
     scene.updateScene(manager.getNextSceneInput())

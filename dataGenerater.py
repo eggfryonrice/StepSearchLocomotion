@@ -5,23 +5,29 @@ from transformationUtil import *
 from nodeSelecter import nodeSelecter, Node, getDirection
 
 
-class nodeDataReader:
+class dataGenerater:
     def __init__(
         self,
-        folderPaths: list[str],
-        idleFilePath: str,
-        interpolation: int = 0,  # interpolation angle in degree
+        folderPaths: list[str],  # each folder has bvh files doing same kines of motion
+        idleFolderPath: str,
+        rotationInterpolation: float = 0,  # interpolation angle in degree
+        translationInterpolation: float = 0,  # interpolation transition
         startPosition: np.ndarray = np.array([0, 0, 0]),
         startDirection: np.ndarray = np.array([0, 0, 1]),
-        contactVelocityThreshold: int = 30,
+        contactVelocityThreshold: int = 20,
     ):
         self.totalFrame: int = -1
 
         self.nodeSelecters: list[nodeSelecter] = []
+        # for each file folder having different kind of motions, we make node selecter
         for folderPath in folderPaths:
             self.nodeSelecters.append(
                 nodeSelecter(
-                    folderPath, idleFilePath, interpolation, contactVelocityThreshold
+                    folderPath,
+                    idleFolderPath,
+                    rotationInterpolation,
+                    translationInterpolation,
+                    contactVelocityThreshold,
                 )
             )
         self.nodeSelecter = self.nodeSelecters[0]
@@ -39,10 +45,13 @@ class nodeDataReader:
         self.objectiveIsMoving = False
 
         self.idle = True
+        # save first idle state when start idle
         self.idleJointsPosition = self.node.file.calculateJointsPositionFromFrame(
             self.node.startFrame, self.node.transformation
         )
 
+    # set objective direction and wheter we should move
+    # also update which kinds of moition want to be displayed by mode
     def setObjective(
         self, objectiveDirection: np.ndarray, isMoving: bool, mode: int = 0
     ):
@@ -53,10 +62,13 @@ class nodeDataReader:
         self.nodeSelecter = nextNodeSelecter
 
     def getNextData(self):
+        # discontinuity at last frame of node
         discontinuity: bool = self.currFrame == self.node.endFrame
+        # total frame doesn't increas when discontinuous
         self.totalFrame += 1 - discontinuity
 
         if self.currFrame > self.node.endFrame:
+            # take new node if current node is finished
             if self.idle:
                 self.node = self.nodeSelecter.getIdleNode(self.idleJointsPosition)
             else:
@@ -67,6 +79,7 @@ class nodeDataReader:
                 )
             self.currFrame = self.node.startFrame
 
+        # determine contact state
         contactIdx1 = self.file.jointNames.index("LeftToe")
         c1 = (
             self.node.file.getJointSpeed(contactIdx1, self.currFrame)
@@ -103,6 +116,7 @@ class nodeDataReader:
         )
         quatData[0] = multQuat(quatY(yRotation), quatData[0])
 
+        # save current joints position and direction
         jointsPosition = self.file.calculateJointsPositionFromQuaternionData(
             translationData, quatData
         )
@@ -112,12 +126,17 @@ class nodeDataReader:
         rootPosition = toCartesian(self.currentJointsPosition[0])
         rootPosition[1] = 0
         if (not self.objectiveIsMoving) and (not self.idle):
+            # set to idle state
             self.idle = True
+            # save idle state
             self.idleJointsPosition = self.currentJointsPosition
+            # finish current node
             discontinuity = True
             self.currFrame = self.node.endFrame
         if self.idle and self.objectiveIsMoving:
+            # get out from idle state
             self.idle = False
+            # finish current node
             discontinuity = True
             self.currFrame = self.node.endFrame
 

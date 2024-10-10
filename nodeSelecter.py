@@ -6,6 +6,10 @@ from BVHFile import BVHFile
 from transformationUtil import *
 
 
+# node has file, startframe, endframe, and transformation
+# to calculate joints positition from start to end of node
+# additionally, it has requiredYRot and requiredTranslation that
+# to be gradually applied during the motion
 class Node:
     def __init__(
         self,
@@ -24,6 +28,7 @@ class Node:
         self.requiredTranslation = requiredTranslation
 
 
+# find all contact points to get start of contacts
 def findStartOfContacts(
     file: BVHFile, contactJointName="LeftToe", velocityThreshold=30
 ):
@@ -41,6 +46,9 @@ def findStartOfContacts(
     return startOfContacts
 
 
+# get direction of movment by current joint posture
+# get direction by cross product of two vectors:
+# spine to left up leg, spine to right up leg
 def getDirection(file: BVHFile, jointsPosition: np.ndarray):
     spinePos = toCartesian(jointsPosition[file.jointNames.index("Spine")])
     leftPos = toCartesian(jointsPosition[file.jointNames.index("LeftUpLeg")])
@@ -55,7 +63,8 @@ class nodeSelecter:
         self,
         folderPath,
         idleFolderPath,
-        interpolation: int = 0.0,
+        rotationInterpolation: float = 0.0,
+        translationInterpolation: float = 0.0,
         contactVelocityThreshold=30,
     ):
         self.files: list[BVHFile] = []
@@ -78,8 +87,9 @@ class nodeSelecter:
             tuple[BVHFile, int, int, np.ndarray, np.ndarray]
         ] = []
 
-        self.interpolation = interpolation
-
+        self.rotationInterpolation = rotationInterpolation
+        self.translationInterpolation = translationInterpolation
+        # find all nodes among files
         for file in self.files:
             leftStartOfContacts = findStartOfContacts(
                 file, "LeftToe", contactVelocityThreshold
@@ -117,6 +127,7 @@ class nodeSelecter:
 
         self.isLeftContact = True
 
+    # get start idle node by first position and direction
     def getStartIdleNode(
         self,
         controlPosition,
@@ -132,19 +143,21 @@ class nodeSelecter:
         translation = translationMat(controlPosition - position)
         return Node(file, 0, file.numFrames - 1, translation @ rotation)
 
+    # get idle node that can be smoothly interpolated from current motion
     def getIdleNode(
         self,
         jointsPosition,
     ):
+        # select random idle motion from idle files
         idleIdx = random.randrange(len(self.idleFiles))
         file = self.idleFiles[idleIdx]
-        direction = getDirection(file, jointsPosition)
 
+        direction = getDirection(file, jointsPosition)
         startJointsPosition = file.calculateJointsPositionFromFrame(0)
         startDirection = getDirection(file, startJointsPosition)
         rotation = quatToMat(vecToVecQuat(startDirection, direction))
 
-        # which foot is at front?
+        # determine which foot is at front
         rootPosition = toCartesian(jointsPosition[0])
         rootPosition[1] = 0
         leftContactPosition = toCartesian(jointsPosition[self.leftContactIdx])
@@ -177,6 +190,7 @@ class nodeSelecter:
         translation = translationMat(frontContactPosition - position)
         return Node(file, 0, file.numFrames - 1, translation @ rotation)
 
+    # get next node from current transition and left right contact state
     def getNextNode(
         self,
         currentJointsPosition,
@@ -191,6 +205,8 @@ class nodeSelecter:
         )
         contactIdx = self.leftContactIdx if self.isLeftContact else self.rightContactIdx
 
+        # find best index (best next node) and list of nodes that are good enough
+        # good enough means rotation can be accurate when interpolated
         bestIdx = 0
         goodEnoughIdxes = []
         bestError = float("inf")
@@ -202,9 +218,11 @@ class nodeSelecter:
             if error < bestError:
                 bestError = error
                 bestIdx = idx
-            if error < 2 * math.sin(self.interpolation * math.pi / 180 / 2):
+            if error < 2 * math.sin(self.rotationInterpolation * math.pi / 180 / 2):
                 goodEnoughIdxes.append(idx)
 
+        # if there is no good enough nodes we just ust bext index
+        # else, we choose the one with biggest displacement along objective direction
         if len(goodEnoughIdxes) > 0:
             bestIdx = goodEnoughIdxes[0]
             bestDisplacement = -float("inf")
@@ -225,14 +243,40 @@ class nodeSelecter:
         file, start, end, startDirection, endDirection = transitions[bestIdx]
         rotation = quatToMat(vecToVecQuat(startDirection, currentDirection))
 
+        # rotation interpolation
+        # we adjust end Direction to be matched with objective direction
+        # maximum amount of adjustment is rotationInterpolation value in degree
         endDirection = toCartesian(rotation @ toProjective(endDirection))
         angleError = np.arccos(np.clip(np.dot(endDirection, objectiveDirection), -1, 1))
         interpAngle = np.clip(
             angleError,
-            -self.interpolation * math.pi / 180,
-            self.interpolation * math.pi / 180,
+            -self.rotationInterpolation * math.pi / 180,
+            self.rotationInterpolation * math.pi / 180,
         )
 
+        # translation interpolation
+        # from startPosition and endPosition, we get displacement
+        # we reduce orthogonal component of displacement with respect to objective direction
+        # maximum by translationInterpolation Value
+        startPosition = toCartesian(
+            file.calculateJointPositionFromFrame(0, start, rotation)
+        )
+        startPosition[1] = 0
+        endPosition = toCartesian(
+            file.calculateJointPositionFromFrame(0, end, rotation)
+        )
+        endPosition[1] = 0
+        translationError = orthogonalComponent(
+            objectiveDirection, endPosition - startPosition
+        )
+        translationErrorSize = np.linalg.norm(translationError)
+        interpTranslation = (
+            -min(translationErrorSize, self.translationInterpolation)
+            * translationError
+            / translationErrorSize
+        )
+
+        # calculate translation by matching contact position
         startContactPosition = toCartesian(
             file.calculateJointPositionFromFrame(contactIdx, start, rotation)
         )
@@ -241,8 +285,12 @@ class nodeSelecter:
         translationVector[1] = 0
         translation = translationMat(translationVector)
 
+        # revert contact state
         self.isLeftContact = not self.isLeftContact
-        return Node(file, start, end, translation @ rotation, interpAngle)
+
+        return Node(
+            file, start, end, translation @ rotation, interpAngle, interpTranslation
+        )
 
 
 if __name__ == "__main__":

@@ -67,12 +67,15 @@ class pygameScene:
         self.mouseDragging: bool = False
         self.prevMousePosition: tuple[int, int] = (0, 0)
 
-        self.centerMovingDirection = np.array([0, 0, 1])
-        self.centerIsMoving = False
-
-        self.mode = 0
-
+        # highlightpoint drawn on the floor
         self.highLightPoint = np.array([0.0, 0.0, 0.0])
+
+        # save moving control by keyboard
+        self.controlMovingDirection = np.array([0, 0, 1])
+        self.controlIsMoving = False
+
+        # mode can bo modified by keyboard numbers
+        self.mode = 0
 
     def initOpengl(self):
         glEnable(GL_DEPTH_TEST)
@@ -149,6 +152,8 @@ class pygameScene:
     def handleKeyBoardInput(self):
         keys = pygame.key.get_pressed()
 
+        # handle character control by keyboard
+        # is ther is cameraspeed, camera position will also be modified
         direction = np.array([0.0, 0.0, 0.0])
         if keys[pygame.K_UP]:
             direction[0] -= math.cos(self.cameraAngleY)
@@ -164,33 +169,26 @@ class pygameScene:
             direction[2] -= math.cos(self.cameraAngleY)
         if np.linalg.norm(direction) > 1e-8:
             direction = direction / np.linalg.norm(direction)
-            self.centerMovingDirection = direction
-            self.centerIsMoving = True
+            self.controlMovingDirection = direction
+            self.controlIsMoving = True
             change = self.speed * self.frameTime * direction
             self.cameraCenter += change
         else:
-            self.centerIsMoving = False
+            self.controlIsMoving = False
 
-        # Handle arrow keys for camera panning (left/right/up/down)
-        if keys[pygame.K_a]:  # Rotate camera left
+        # handle camera panning (left/right/up/down)
+        if keys[pygame.K_a]:
             self.cameraAngleY -= 0.05
-        if keys[pygame.K_d]:  # Rotate camera right
+        if keys[pygame.K_d]:
             self.cameraAngleY += 0.05
-        if keys[pygame.K_w]:  # Rotate camera left
+        if keys[pygame.K_w]:
             self.cameraAngleX = min(math.pi / 2 - 1e-8, self.cameraAngleX + 0.05)
-        if keys[pygame.K_s]:  # Rotate camera right
+        if keys[pygame.K_s]:
             self.cameraAngleX = max(0, self.cameraAngleX - 0.05)
 
-        if keys[pygame.K_0]:
-            self.mode = 0
-        if keys[pygame.K_1]:
-            self.mode = 1
-        if keys[pygame.K_2]:
-            self.mode = 2
-        if keys[pygame.K_3]:
-            self.mode = 3
-
-        glLoadIdentity()
+        for i in range(10):
+            if keys[getattr(pygame, f"K_{i}")]:
+                self.mode = i
 
     def adjustCamera(self):
         glLoadIdentity()
@@ -347,6 +345,7 @@ class pygameScene:
                 glVertex3f(x, height, z + blockSize)
                 glEnd()
 
+        # draw highlight and arrow from highlight pointing moving direction
         if drawHighLight:
             x = self.highLightPoint[0]
             z = self.highLightPoint[2]
@@ -361,7 +360,7 @@ class pygameScene:
                 dz = radius * math.sin(angle)
                 glVertex3f(x + dx, height + 1, z + dz)
             glEnd()
-            self.drawArrow(self.highLightPoint, self.centerMovingDirection)
+            self.drawArrow(self.highLightPoint, self.controlMovingDirection)
 
         glPopMatrix()
 
@@ -427,6 +426,7 @@ class pygameScene:
 
 
 if __name__ == "__main__":
-    scene = pygameScene()
+    scene = pygameScene(speed=100)
     while scene.running:
+        scene.highLightPoint = scene.cameraCenter
         scene.updateScene((0, [(np.array([[0.0, 0.0, 0.0]]), (1, 0.5, 0.5))], []))

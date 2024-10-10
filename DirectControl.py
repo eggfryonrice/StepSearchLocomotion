@@ -2,14 +2,19 @@ import numpy as np
 
 from transformationUtil import *
 from pygameScene import pygameScene
-from nodeDataReader import nodeDataReader
+from dataGenerater import dataGenerater
+from nodeSelecter import nodeSelecter
 from inertializationManager import inertializationManager
 
 
 folderPaths = ["./walkingData", "./runningData"]
-idleFilePath = "./idleData"
-dataFtn = nodeDataReader(
-    folderPaths, idleFilePath, interpolation=5, contactVelocityThreshold=20
+idleFolderPath = "./idleData"
+dataFtn = dataGenerater(
+    folderPaths,
+    idleFolderPath,
+    rotationInterpolation=5,
+    translationInterpolation=7,
+    contactVelocityThreshold=20,
 )
 file = dataFtn.file
 
@@ -33,8 +38,8 @@ while scene.running:
     )
     scene.highLightPoint = manager.currentRootPosition
 
-    direction = scene.centerMovingDirection
-    isMoving = scene.centerIsMoving
+    direction = scene.controlMovingDirection
+    isMoving = scene.controlIsMoving
     mode = scene.mode % 2
     dataFtn.setObjective(direction, isMoving, mode)
     scene.updateScene(manager.getNextSceneInput())
