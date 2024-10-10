@@ -145,7 +145,6 @@ class pygameScene:
     def handleKeyBoardInput(self):
         keys = pygame.key.get_pressed()
 
-        speed = 10
         direction = np.array([0.0, 0.0, 0.0])
         if keys[pygame.K_UP]:
             direction[0] -= math.cos(self.cameraAngleY)
