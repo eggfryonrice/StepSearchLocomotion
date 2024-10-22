@@ -1,7 +1,7 @@
 This is memory-efficient, realistic, real-time controllable locomotion generator made by python.
 
 ## Example Video
-<img src = "result.gif">
+<img src = "exampleVideo.gif">
 The red arrow on the floor indicates the direction you're pointing with your keyboard input.
 
 
