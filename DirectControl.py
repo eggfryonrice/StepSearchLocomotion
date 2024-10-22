@@ -40,6 +40,6 @@ while scene.running:
 
     direction = scene.controlMovingDirection
     isMoving = scene.controlIsMoving
-    mode = scene.mode % 2
+    mode = scene.mode % len(folderPaths)
     dataFtn.setObjective(direction, isMoving, mode)
     scene.updateScene(manager.getNextSceneInput())
